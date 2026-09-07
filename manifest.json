@@ -1,0 +1,14 @@
+{
+  "name": "БЕЛ-ТІРЕК — программа для поясницы",
+  "short_name": "БЕЛ-ТІРЕК",
+  "description": "4-недельная программа ЛФК и нейро-ОФП для снятия и профилактики боли в пояснице",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0d0d0f",
+  "theme_color": "#0d0d0f",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
