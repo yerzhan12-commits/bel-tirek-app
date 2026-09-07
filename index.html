@@ -1061,13 +1061,11 @@ function finishTimer(){
 
 /* =========================================================
    INIT
+   Приветственный экран показывается при каждом открытии
+   приложения — как в ТІЗЕ. Кнопка "Начать программу" просто
+   переводит на текущий день, ничего не запоминая насчёт
+   пропуска приветствия в будущем.
 ========================================================= */
-if(state.started){
-  document.getElementById("bottom-nav").style.display = "flex";
-  renderProgram();
-  showScreen("screen-program");
-  setTab("program");
-}
 
 if("serviceWorker" in navigator){
   window.addEventListener("load", ()=>{
