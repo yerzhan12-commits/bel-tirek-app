@@ -107,6 +107,16 @@
 
   .week-label{padding:6px 18px 2px; font-size:12px; color:var(--muted); letter-spacing:.5px;}
 
+  /* ---------- Test-transition card ---------- */
+  .test-card{margin:14px 18px 20px; padding:16px; background:var(--card); border:1px solid var(--accent-dim); border-radius:14px;}
+  .test-card .test-label{font-size:11px; font-weight:700; letter-spacing:.5px; color:var(--accent); margin-bottom:6px;}
+  .test-card .test-name{font-size:15px; font-weight:800; margin-bottom:8px;}
+  .test-card .test-row{display:flex; gap:8px; font-size:12.5px; line-height:1.5; color:#cfccc8; margin-bottom:6px;}
+  .test-card .test-row:last-child{margin-bottom:0;}
+  .test-card .test-row b{color:var(--text); flex:none; width:78px;}
+  .test-card .test-pass{color:#b9d9c4;}
+  .test-card .test-fail{color:var(--muted);}
+
   /* ---------- Day detail ---------- */
   .day-nav{display:flex; align-items:center; justify-content:space-between; padding:14px 18px 6px;}
   .day-nav button{background:var(--card); border:1px solid var(--line); color:var(--text); border-radius:10px; padding:8px 14px; font-size:14px; cursor:pointer;}
@@ -231,6 +241,7 @@
     <div class="week-tabs" id="week-tabs"></div>
     <div class="week-label" id="week-label"></div>
     <div class="day-grid" id="day-grid"></div>
+    <div class="test-card" id="test-card"></div>
   </div>
 
   <!-- ===================== DAY DETAIL ===================== -->
@@ -316,6 +327,8 @@
       <p>Если у упражнения есть кнопка «⏱ Таймер» — она сама отсчитывает удержание и подсказывает звуком, когда менять фазу.</p>
       <div class="label">ЗАМЕТКИ</div>
       <p>Внизу каждого дня можно оставить заметку — например, как сегодня повела себя поясница.</p>
+      <div class="label">ТЕСТ НА ПЕРЕХОД</div>
+      <p>Под картой дней каждой недели есть тест — конкретное упражнение с чётким критерием «прошёл/не прошёл». Переходи на следующую неделю по этому тесту, а не по календарю: не прошёл — просто повтори текущую неделю ещё раз.</p>
       <div class="label">СТАТИСТИКА</div>
       <p>Показывает прогресс по неделям и карту всех дней программы — нажми на день в карте, чтобы сразу перейти к нему.</p>
       <div class="label">ОФЛАЙН</div>
@@ -540,6 +553,37 @@ const DAYS = [
 ];
 
 /* =========================================================
+   DATA: week-transition tests
+   Переход к следующей неделе — по тесту, а не по календарю.
+========================================================= */
+const TESTS = {
+  1:{
+    name:"Тест бёрд-дога",
+    how:"Из положения на четвереньках вытяните противоположные руку и ногу и удержите 10 секунд на каждую сторону.",
+    pass:"Таз и плечи не разворачиваются, поясница не проваливается, боль не выше 3 из 10.",
+    next:"Неделя 2"
+  },
+  2:{
+    name:"Тест боковой планки",
+    how:"Боковая планка с колен, тело прямой линией от головы до колен.",
+    pass:"Удержали 20 секунд на каждую сторону без провала в пояснице и без задержки дыхания.",
+    next:"Неделя 3"
+  },
+  3:{
+    name:"Тест hip hinge",
+    how:"10 повторов наклона с прямой спиной (можно снять себя сбоку на телефон и сверить).",
+    pass:"Все 10 повторов — поясница не круглится, движение идёт в тазобедренном суставе.",
+    next:"Неделя 4"
+  },
+  4:{
+    name:"Финальный функциональный тест",
+    how:"10 раз подряд встать со стула и сесть обратно, без помощи рук.",
+    pass:"Все 10 раз — без боли и без опоры руками. Это и есть цель всей программы.",
+    next:"Программа пройдена"
+  }
+};
+
+/* =========================================================
    DATA: success protocol
 ========================================================= */
 const PROTOCOL = [
@@ -690,6 +734,14 @@ function renderProgram(){
     });
     grid.appendChild(cell);
   });
+
+  const t = TESTS[currentWeek];
+  document.getElementById("test-card").innerHTML =
+    '<div class="test-label">ТЕСТ НА ПЕРЕХОД → '+t.next.toUpperCase()+'</div>'+
+    '<div class="test-name">'+t.name+'</div>'+
+    '<div class="test-row"><b>Как делать</b><span>'+t.how+'</span></div>'+
+    '<div class="test-row"><b class="test-pass">Прошёл, если</b><span class="test-pass">'+t.pass+'</span></div>'+
+    '<div class="test-row"><b class="test-fail">Не прошёл?</b><span class="test-fail">Не страшно — повторите эту неделю ещё раз и проверьте тест снова, это не откат назад.</span></div>';
 }
 
 /* =========================================================
