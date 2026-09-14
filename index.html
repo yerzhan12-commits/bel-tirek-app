@@ -60,6 +60,18 @@
   #screen-welcome .welcome-warn{margin:18px 0 0; padding:14px 16px; background:linear-gradient(135deg,#241a10,#1c1212); border:1px solid #6b4a1f; border-radius:14px; text-align:left;}
   #screen-welcome .welcome-warn-item{font-size:12.5px; color:#f0e2c9; line-height:1.5;}
   #screen-welcome .welcome-warn-item + .welcome-warn-item{margin-top:8px;}
+
+  /* ---------- Access gate ---------- */
+  #screen-gate{padding:32px 24px; justify-content:center; align-items:center; text-align:center; min-height:100vh;}
+  .gate-box{width:100%;}
+  .gate-logo{font-size:36px; font-weight:800; letter-spacing:1px; color:var(--accent); margin-bottom:6px;}
+  .gate-logo-sub{color:var(--ink3); font-size:13px; margin-bottom:22px;}
+  .gate-box p{font-size:14px; color:#cfccc8; margin:0 0 20px; line-height:1.5;}
+  .gate-input{width:100%; padding:14px; border-radius:12px; border:1px solid var(--line); background:var(--card); color:var(--ink); font-size:16px; text-align:center; letter-spacing:1px; margin-bottom:10px; font-family:inherit;}
+  .gate-input:focus{outline:none; border-color:var(--accent);}
+  .gate-error{color:#e0745c; font-size:12.5px; margin-bottom:10px;}
+  #gate-submit{width:100%; padding:14px; font-size:15px; font-weight:700; background:var(--accent); color:#0d0d0f; border:none; border-radius:12px; cursor:pointer;}
+  .buyer-watermark{font-size:10.5px; color:var(--ink3);}
   #screen-welcome .welcome-good{margin:14px 0 0; padding:14px 16px; background:#132019; border:1px solid #2a4a38; border-radius:14px; text-align:left;}
   #screen-welcome .welcome-good-item{font-size:12.5px; color:#c9e5d5; line-height:1.5;}
 
@@ -206,8 +218,21 @@
 <body>
 <div id="app">
 
+  <!-- ===================== ACCESS GATE ===================== -->
+  <div class="screen active" id="screen-gate">
+    <div class="gate-box">
+      <div class="gate-logo">БЕЛ-ТІРЕК</div>
+      <div class="gate-logo-sub">персональный доступ</div>
+      <p>Введи код доступа, который получил при покупке.</p>
+      <input type="text" id="gate-code" class="gate-input" placeholder="Код доступа" autocapitalize="characters" autocomplete="off">
+      <div id="gate-error" class="gate-error" style="display:none;">Код не найден. Проверь правильность ввода.</div>
+      <button id="gate-submit">Войти →</button>
+    </div>
+  </div>
+
   <!-- ===================== WELCOME ===================== -->
-  <div class="screen active" id="screen-welcome">
+  <div class="screen" id="screen-welcome">
+    <div class="buyer-watermark" style="margin-bottom:6px;"></div>
     <div class="logo">БЕЛ-ТІРЕК</div>
     <div class="logo-sub">каз. «бел» — поясница, «тірек» — опора</div>
     <p>4-недельная программа ЛФК и нейро-ОФП для снятия и профилактики боли в пояснице: не «накачать спину», а вернуть ей контроль. Позвоночник держит не мышца сама по себе, а связка мышца–сустав–мозг — программа учит сначала находить нейтральное положение поясницы, затем удерживать его в статике, и только потом — под движением.</p>
@@ -1151,12 +1176,80 @@ function finishTimer(){
 }
 
 /* =========================================================
-   INIT
-   Приветственный экран показывается при каждом открытии
-   приложения — как в ТІЗЕ. Кнопка "Начать программу" просто
-   переводит на текущий день, ничего не запоминая насчёт
-   пропуска приветствия в будущем.
+   ACCESS GATE
+   Один код — одно устройство, как в ТІЗЕ. Проверка идёт через
+   Vercel-функцию на zhaloba-master (общая KV-база кодов),
+   а не отдельный Cloudflare Worker.
 ========================================================= */
+const ACCESS_KEY = "beltirek_access_v1";
+const AUTH_ENDPOINT = "https://zhaloba-master.vercel.app/api/bel-tirek/verify";
+
+function unlockApp(name){
+  document.querySelectorAll(".buyer-watermark").forEach(el=> el.textContent = "👤 "+name);
+  showScreen("screen-welcome");
+}
+
+async function verifyCode(code, token){
+  const res = await fetch(AUTH_ENDPOINT, {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({code, token: token || null})
+  });
+  return res.json();
+}
+
+async function checkAccess(){
+  let saved = null;
+  try{ saved = JSON.parse(localStorage.getItem(ACCESS_KEY) || "null"); }catch(e){}
+  if(!saved){ showScreen("screen-gate"); return; }
+  try{
+    const data = await verifyCode(saved.code, saved.token);
+    if(data.ok){
+      if(data.token && data.token !== saved.token){
+        localStorage.setItem(ACCESS_KEY, JSON.stringify({code:saved.code, name:data.name, token:data.token}));
+      }
+      unlockApp(data.name);
+    } else {
+      localStorage.removeItem(ACCESS_KEY);
+      showScreen("screen-gate");
+    }
+  } catch(e){
+    // офлайн — доверяем локально сохранённому доступу, чтобы приложение работало без интернета
+    unlockApp(saved.name);
+  }
+}
+
+document.getElementById("gate-submit").addEventListener("click", async ()=>{
+  const raw = document.getElementById("gate-code").value.trim().toUpperCase();
+  const errEl = document.getElementById("gate-error");
+  const btn = document.getElementById("gate-submit");
+  if(!raw) return;
+  btn.disabled = true;
+  try{
+    const data = await verifyCode(raw, null);
+    if(data.ok){
+      localStorage.setItem(ACCESS_KEY, JSON.stringify({code:raw, name:data.name, token:data.token}));
+      errEl.style.display = "none";
+      unlockApp(data.name);
+    } else if(data.error === "used"){
+      errEl.textContent = "Этот код уже активирован на другом устройстве.";
+      errEl.style.display = "block";
+    } else {
+      errEl.textContent = "Код не найден. Проверь правильность ввода.";
+      errEl.style.display = "block";
+    }
+  } catch(e){
+    errEl.textContent = "Нет соединения с интернетом. Попробуй ещё раз.";
+    errEl.style.display = "block";
+  } finally {
+    btn.disabled = false;
+  }
+});
+document.getElementById("gate-code").addEventListener("keydown", (e)=>{
+  if(e.key === "Enter") document.getElementById("gate-submit").click();
+});
+
+checkAccess();
 
 if("serviceWorker" in navigator){
   window.addEventListener("load", ()=>{
